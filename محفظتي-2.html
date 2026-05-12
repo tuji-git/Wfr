@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#07090f">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>💰 محفظتي</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:Tajawal,Arial,sans-serif;background:#07090f;color:#e2e8f0;direction:rtl;min-height:100vh;overscroll-behavior:none}
+#app{max-width:440px;margin:0 auto;padding-bottom:70px}
+.page{padding:16px 14px}
+.hdr{background:linear-gradient(160deg,#091525,#0d1f35 60%,#071a12);padding:22px 16px 18px}
+.card{background:#0d1117;border:1px solid #1a2535;border-radius:14px;padding:14px}
+.card2{background:#131a26}
+.row{display:flex;gap:8px;align-items:center}
+.col{display:flex;flex-direction:column;gap:6px}
+input,select{font-family:inherit;background:#131a26;color:#e2e8f0;border:1px solid #1a2535;border-radius:10px;padding:10px 12px;width:100%;outline:none;font-size:14px}
+input:focus,select:focus{border-color:#0ea5e9}
+.btn{cursor:pointer;font-family:inherit;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:700;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{opacity:.7}
+.btn-green{background:#10b981;color:white}
+.btn-red{background:#ef4444;color:white}
+.btn-blue{background:#0ea5e9;color:white}
+.btn-ghost{background:#131a26;color:#0ea5e9;border:1px solid #1a2535}
+.btn-sm{padding:6px 12px;font-size:11px;border-radius:8px}
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:440px;background:#0d1117;border-top:1px solid #1a2535;display:flex;z-index:100}
+.nav-btn{flex:1;padding:9px 0;background:none;border:none;cursor:pointer;font-family:inherit;color:#64748b;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;transition:color .2s}
+.nav-btn.active{color:#0ea5e9}
+.nav-dot{width:20px;height:2px;background:#0ea5e9;border-radius:1px;margin-top:2px}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#0d1117;border-radius:20px 20px 0 0;width:100%;max-width:440px;max-height:92vh;overflow-y:auto;padding:18px 16px 36px}
+.modal-bar{width:36px;height:4px;background:#1a2535;border-radius:2px;margin:0 auto 16px}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 18px;border-radius:14px;font-size:13px;text-align:center;white-space:pre-wrap;line-height:1.7;max-width:90vw;color:white;box-shadow:0 8px 30px rgba(0,0,0,.7);pointer-events:none}
+.bar{background:#1a2535;border-radius:6px;height:8px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;transition:width .5s}
+.badge{padding:4px 8px;border-radius:8px;font-size:11px;font-weight:600}
+.lbl{font-size:11px;color:#64748b;display:block;margin-bottom:4px}
+.cat-grid{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.cat-btn{padding:5px 9px;border-radius:8px;font-size:11px;cursor:pointer;border:1px solid #1a2535;background:#131a26;color:#64748b;font-family:inherit}
+.tx-row{background:#0d1117;border-radius:12px;padding:11px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
+.tx-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.divider{width:1px;background:#1a2535;align-self:stretch}
+.stat{text-align:center;flex:1}
+.stat-label{color:#64748b;font-size:10px;margin-bottom:2px}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th,td{padding:5px 4px;text-align:right;border-bottom:1px solid #1a2535}
+th{color:#64748b}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#1e3a5f;border-radius:2px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal-container"></div>
+<div id="toast-el" class="toast" style="display:none"></div>
+
+<script>
+// ═══ CONFIG ═══
+const WCOLS = ['#0ea5e9','#10b981','#f59e0b','#a855f7','#f43f5e'];
+const DEF_CATS = [
+  {id:'food',l:'🍔 طعام',c:'#f97316'},{id:'transport',l:'🚗 مواصلات',c:'#3b82f6'},
+  {id:'shopping',l:'🛍️ تسوق',c:'#ec4899'},{id:'bills',l:'💡 فواتير',c:'#eab308'},
+  {id:'health',l:'💊 صحة',c:'#22c55e'},{id:'entertainment',l:'🎮 ترفيه',c:'#a855f7'},
+  {id:'education',l:'📚 تعليم',c:'#06b6d4'},{id:'salary',l:'💰 راتب',c:'#10b981'},
+  {id:'savings',l:'🏦 ادخار',c:'#14b8a6'},{id:'gift',l:'🎁 هدايا',c:'#f43f5e'},
+  {id:'transfer',l:'↔️ تحويل',c:'#94a3b8'},{id:'other',l:'📦 أخرى',c:'#6b7280'}
+];
+const MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+// ═══ STATE ═══
+const LS = {
+  get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}},
+  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+};
+
+let S = {
+  pg: 'home',
+  wallets: LS.get('wlt7',[{id:'w1',name:'المحفظة الرئيسية',balance:0,currency:'IQD',minBalance:0}]),
+  txs:     LS.get('txs7',[]),
+  rec:     LS.get('rec7',[]),
+  goals:   LS.get('gls7',[]),
+  debts:   LS.get('dbt7',[]),
+  cats:    LS.get('cat7',DEF_CATS),
+  budgets: LS.get('bgt7',[]),
+  cfg:     LS.get('cfg7',{rate:1500,notifMorning:true,notifEvening:true,hourMorning:8,hourEvening:21}),
+  hideBalance: false,
+  reportTab: 'pie',
+  goalsTab: 'goals',
+  settingsTab: 'wallets',
+};
+
+const save = k => LS.set(k, S[{wallets:'wlt7',txs:'txs7',rec:'rec7',goals:'gls7',debts:'dbt7',cats:'cat7',budgets:'bgt7',cfg:'cfg7'}[k]||k]);
+
+// ═══ HELPERS ═══
+const uid = () => Math.random().toString(36).slice(2,9);
+const today = () => new Date().toISOString().slice(0,10);
+const toIQD = (n,cur) => cur==='USD' ? n*S.cfg.rate : n;
+const fmtIQD = n => { const a=Math.abs(Math.round(n)); return (n<0?'-':'')+new Intl.NumberFormat('ar-IQ').format(a)+' د.ع'; };
+const fmtUSD = n => (n<0?'-$':'$')+Math.abs(n).toFixed(2);
+const fmt = (n,cur) => cur==='USD' ? fmtUSD(n) : fmtIQD(n);
+const getCat = id => S.cats.find(c=>c.id===id)||{l:'📦 أخرى',c:'#6b7280'};
+const getWallet = id => S.wallets.find(w=>w.id===id)||{name:'?'};
+const M = '●●●●●';
+
+let toastTimer;
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast-el');
+  el.textContent = msg;
+  el.style.background = type==='warn'?'#7c2d12':type==='info'?'#0c2d4a':'#064e35';
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.style.display='none', 4000);
+}
+
+// ═══ NOTIFICATIONS ═══
+setInterval(()=>{
+  const now=new Date(); const h=now.getHours(); const key=now.toDateString();
+  const sent=JSON.parse(localStorage.getItem('ns7')||'{}');
+  const {rate,notifMorning,notifEvening,hourMorning,hourEvening}=S.cfg;
+  if(notifMorning&&h===(hourMorning||8)&&!sent[key+'_m']){
+    const total=S.wallets.reduce((s,w)=>s+toIQD(w.balance,w.currency),0);
+    const msg='🌅 صباح الخير!\n💰 رصيدك: '+fmtIQD(total);
+    toast(msg,'info');
+    if('Notification'in window&&Notification.permission==='granted') new Notification('💰 صباح الخير',{body:'رصيدك: '+fmtIQD(total)});
+    sent[key+'_m']=1; localStorage.setItem('ns7',JSON.stringify(sent));
+  }
+  if(notifEvening&&h===(hourEvening||21)&&!sent[key+'_e']){
+    const ds=today();
+    const sp=S.txs.filter(t=>t.date===ds&&t.type==='expense').reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+    const total=S.wallets.reduce((s,w)=>s+toIQD(w.balance,w.currency),0);
+    const msg='🌙 ملخص يومك\n💸 صرفت: '+fmtIQD(sp)+'\n💰 رصيدك: '+fmtIQD(total);
+    toast(msg,'info');
+    if('Notification'in window&&Notification.permission==='granted') new Notification('💰 ملخص يومك',{body:'صرفت: '+fmtIQD(sp)});
+    sent[key+'_e']=1; localStorage.setItem('ns7',JSON.stringify(sent));
+  }
+  const day=now.getDate();
+  S.rec.forEach(r=>{
+    const k2='r_'+now.toDateString()+'_'+r.id;
+    if(r.day===day&&!sent[k2]){ toast('🔔 تذكير: "'+r.name+'" — '+fmt(r.amount,r.currency),'info'); sent[k2]=1; localStorage.setItem('ns7',JSON.stringify(sent)); }
+  });
+},60000);
+
+// ═══ RENDER ENGINE ═══
+function render() {
+  const app = document.getElementById('app');
+  let html = '';
+  if(S.pg==='home')    html = pgHome();
+  if(S.pg==='txs')     html = pgTxs();
+  if(S.pg==='reports') html = pgReports();
+  if(S.pg==='goals')   html = pgGoals();
+  if(S.pg==='settings')html = pgSettings();
+  html += navHTML();
+  app.innerHTML = html;
+  bindEvents();
+}
+
+function navHTML() {
+  const tabs=[['home','🏠','الرئيسية'],['txs','📋','المعاملات'],['reports','📊','التقارير'],['goals','🎯','الأهداف'],['settings','⚙️','الإعدادات']];
+  return '<nav class="nav">'+tabs.map(([id,ic,lb])=>`<button class="nav-btn${S.pg===id?' active':''}" onclick="nav('${id}')">${ic}<span>${lb}</span>${S.pg===id?'<div class="nav-dot"></div>':''}</button>`).join('')+'</nav>';
+}
+
+function nav(pg){ S.pg=pg; render(); }
+
+// ═══ HOME PAGE ═══
+function pgHome() {
+  const total = S.wallets.reduce((s,w)=>s+toIQD(w.balance,w.currency),0);
+  const ds = today();
+  const tt = S.txs.filter(t=>t.date===ds);
+  const sp = tt.filter(t=>t.type==='expense').reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+  const ea = tt.filter(t=>t.type==='income').reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+  const owe = S.debts.filter(d=>!d.paid&&d.type==='owe');
+  const hide = S.hideBalance;
+  const tips = getAiTips();
+
+  let walletsHTML = S.wallets.map((w,i)=>`
+    <div class="card" style="border-right:3px solid ${WCOLS[i%WCOLS.length]};margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="color:#64748b;font-size:11px;margin-bottom:2px">${w.name}</div>
+        <div style="font-weight:900;font-size:20px;color:white">${hide?M:fmt(w.balance,w.currency)}</div>
+        <div style="color:#64748b;font-size:10px;margin-top:1px">${w.currency==='USD'?'≈ '+fmtIQD(w.balance*S.cfg.rate):'≈ $'+(w.balance/S.cfg.rate).toFixed(2)}</div>
+        ${w.minBalance>0&&w.balance<w.minBalance?'<div style="color:#ef4444;font-size:10px">⚠️ أقل من الحد الأدنى</div>':''}
+      </div>
+      <button class="btn btn-sm" style="background:${WCOLS[i%WCOLS.length]}18;color:${WCOLS[i%WCOLS.length]};border:1px solid ${WCOLS[i%WCOLS.length]}44" onclick="openModal('editWallet','${w.id}')">تعديل</button>
+    </div>`).join('');
+
+  let recentHTML = S.txs.slice(0,5).map(tx=>{
+    const cat=getCat(tx.category); const w=getWallet(tx.walletId);
+    return `<div class="tx-row">
+      <div class="row" style="gap:9px">
+        <div class="tx-icon" style="background:${cat.c}25">${cat.l.split(' ')[0]}</div>
+        <div><div style="font-size:13px;font-weight:600">${tx.note||cat.l}</div><div style="color:#64748b;font-size:10px">${tx.date} · ${w.name}</div></div>
+      </div>
+      <div style="font-weight:700;color:${tx.type==='income'?'#10b981':'#ef4444'};font-size:13px">${tx.type==='income'?'+':'-'}${fmt(tx.amount,tx.currency)}</div>
+    </div>`;
+  }).join('')||'<p style="color:#64748b;text-align:center;padding:20px">لا توجد معاملات بعد</p>';
+
+  return `
+  <div class="hdr">
+    <div style="position:absolute;top:-50px;right:-30px;width:140px;height:140px;background:rgba(14,165,233,.06);border-radius:50%"></div>
+    <div class="row" style="justify-content:space-between;align-items:start;margin-bottom:14px">
+      <div>
+        <div style="color:#64748b;font-size:11px;margin-bottom:4px">💰 إجمالي الرصيد</div>
+        <div style="font-size:28px;font-weight:900;color:white;letter-spacing:-1px">${hide?M:fmtIQD(total)}</div>
+        <div style="color:#64748b;font-size:11px;margin-top:2px">1$ = ${S.cfg.rate.toLocaleString('ar-IQ')} د.ع</div>
+      </div>
+      <button onclick="S.hideBalance=!S.hideBalance;render()" style="background:none;border:1px solid #1a2535;color:#64748b;border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer">${hide?'👁️':'🙈'}</button>
+    </div>
+    <div class="row" style="gap:8px">
+      ${[['⬆️ دخل',ea,'rgba(16,185,129,.12)','#10b981'],['⬇️ صرف',sp,'rgba(239,68,68,.1)','#ef4444'],['💹 صافي',ea-sp,'rgba(14,165,233,.1)',ea-sp>=0?'#10b981':'#ef4444']].map(([l,v,bg,c])=>`
+      <div style="flex:1;background:${bg};border-radius:11px;padding:9px 10px">
+        <div style="color:${c};font-size:10px;margin-bottom:2px">${l}</div>
+        <div style="color:${c};font-weight:700;font-size:12px">${hide?M:fmtIQD(v)}</div>
+      </div>`).join('')}
+    </div>
+  </div>
+  <div class="page" style="padding-top:10px">
+    ${owe.length?`<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;margin-bottom:10px">
+      <span style="color:#ef4444;font-size:12px;font-weight:600">⚠️ ${owe.length} دين غير مسدد</span>
+      <span style="color:#ef4444;font-size:12px;font-weight:700">${fmtIQD(owe.reduce((s,d)=>s+toIQD(d.amount,d.currency),0))}</span>
+    </div>`:''}
+    <div class="row" style="margin-bottom:8px">
+      <button class="btn btn-green" style="flex:1" onclick="openModal('addTx','income')">⬆️ إضافة</button>
+      <button class="btn btn-red" style="flex:1" onclick="openModal('addTx','expense')">⬇️ خصم</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="openModal('transfer')">↔️ تحويل</button>
+    </div>
+    <button class="btn btn-ghost" style="width:100%;margin-bottom:14px" onclick="dailySummary()">🔔 ملخص اليوم</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-weight:700;font-size:14px">💼 محافظي</span>
+      <button class="btn btn-sm btn-ghost" onclick="openModal('addWallet')">+ جديدة</button>
+    </div>
+    ${walletsHTML}
+    <div style="margin:14px 0 8px;font-weight:700;font-size:14px">🤖 تحليل ذكي</div>
+    <div class="card" style="background:linear-gradient(135deg,#0c1f3a,#071a12)">
+      ${tips.map((t,i)=>`<div style="font-size:12px;line-height:1.8;${i<tips.length-1?'border-bottom:1px solid #1a2535;padding-bottom:7px;margin-bottom:7px':''}">${t}</div>`).join('')}
+    </div>
+    <div style="margin:14px 0 8px;font-weight:700;font-size:14px">🕐 آخر المعاملات</div>
+    ${recentHTML}
+  </div>`;
+}
+
+// ═══ TRANSACTIONS PAGE ═══
+function pgTxs() {
+  const fw=S._fw||'all', ft=S._ft||'all', fc=S._fc||'all', srch=S._srch||'';
+  const fil=S.txs.filter(t=>{
+    if(fw!=='all'&&t.walletId!==fw)return false;
+    if(ft!=='all'&&t.type!==ft)return false;
+    if(fc!=='all'&&t.category!==fc)return false;
+    if(srch&&!(t.note||'').includes(srch))return false;
+    return true;
+  });
+  const tI=fil.filter(t=>t.type==='income').reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+  const tE=fil.filter(t=>t.type==='expense').reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+  return `
+  <div class="page">
+    <div class="row" style="justify-content:space-between;margin-bottom:12px">
+      <span style="font-weight:800;font-size:18px">📋 المعاملات</span>
+      <button class="btn btn-blue btn-sm" onclick="openModal('addTx')">+ جديد</button>
+    </div>
+    <input placeholder="🔍 ابحث..." value="${srch}" oninput="S._srch=this.value;render()" style="margin-bottom:8px">
+    <div class="row" style="margin-bottom:8px;overflow-x:auto;gap:6px">
+      <select onchange="S._ft=this.value;render()" style="min-width:85px;font-size:12px;padding:6px 8px">
+        <option value="all"${ft==='all'?' selected':''}>الكل</option>
+        <option value="income"${ft==='income'?' selected':''}>دخل</option>
+        <option value="expense"${ft==='expense'?' selected':''}>مصروف</option>
+      </select>
+      <select onchange="S._fw=this.value;render()" style="min-width:105px;font-size:12px;padding:6px 8px">
+        <option value="all"${fw==='all'?' selected':''}>كل المحافظ</option>
+        ${S.wallets.map(w=>`<option value="${w.id}"${fw===w.id?' selected':''}>${w.name}</option>`).join('')}
+      </select>
+      <select onchange="S._fc=this.value;render()" style="min-width:105px;font-size:12px;padding:6px 8px">
+        <option value="all"${fc==='all'?' selected':''}>كل الفئات</option>
+        ${S.cats.map(c=>`<option value="${c.id}"${fc===c.id?' selected':''}>${c.l}</option>`).join('')}
+      </select>
+    </div>
+    <div class="card row" style="justify-content:space-around;margin-bottom:9px">
+      <div class="stat"><div class="stat-label">دخل</div><div style="color:#10b981;font-weight:700;font-size:12px">${fmtIQD(tI)}</div></div>
+      <div class="divider"></div>
+      <div class="stat"><div class="stat-label">مصاريف</div><div style="color:#ef4444;font-weight:700;font-size:12px">${fmtIQD(tE)}</div></div>
+      <div class="divider"></div>
+      <div class="stat"><div class="stat-label">صافي</div><div style="color:${tI-tE>=0?'#10b981':'#ef4444'};font-weight:700;font-size:12px">${fmtIQD(tI-tE)}</div></div>
+    </div>
+    ${fil.length?fil.map(tx=>{const cat=getCat(tx.category);const w=getWallet(tx.walletId);return`
+    <div class="tx-row">
+      <div class="row" style="gap:9px">
+        <div class="tx-icon" style="background:${cat.c}25">${cat.l.split(' ')[0]}</div>
+        <div><div style="font-size:13px;font-weight:600">${tx.note||cat.l}</div><div style="color:#64748b;font-size:10px">${tx.date} · ${w.name}</div></div>
+      </div>
+      <div class="row" style="gap:8px">
+        <div style="font-weight:700;font-size:13px;color:${tx.type==='income'?'#10b981':'#ef4444'}">${tx.type==='income'?'+':'-'}${fmt(tx.amount,tx.currency)}</div>
+        <button onclick="delTx('${tx.id}')" style="background:none;border:none;color:#64748b;font-size:14px;cursor:pointer;padding:2px 4px">🗑️</button>
+      </div>
+    </div>`;}).join(''):'<p style="color:#64748b;text-align:center;padding:30px">لا توجد معاملات</p>'}
+  </div>`;
+}
+
+// ═══ REPORTS PAGE ═══
+function pgReports() {
+  const tab=S.reportTab;
+  const now=new Date(), m=now.getMonth(), y=now.getFullYear();
+  const mExp=S.txs.filter(t=>{const dd=new Date(t.date);return dd.getMonth()===m&&dd.getFullYear()===y&&t.type==='expense';});
+  const mInc=S.txs.filter(t=>{const dd=new Date(t.date);return dd.getMonth()===m&&dd.getFullYear()===y&&t.type==='income';});
+  const tE=mExp.reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+  const tI=mInc.reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+  const catAcc={};mExp.forEach(t=>{catAcc[t.category]=(catAcc[t.category]||0)+toIQD(t.amount,t.currency);});
+  const tabs=[['pie','🥧 فئات'],['bar','📊 أشهر'],['top5','🏆 أعلى 5'],['budget','🎯 ميزانية']];
+
+  let content='';
+  if(tab==='pie'){
+    const data=Object.entries(catAcc).map(([id,v])=>{const cat=getCat(id);return{name:cat.l,value:Math.round(v),color:cat.c};}).sort((a,b)=>b.value-a.value);
+    if(!data.length){content='<p style="color:#64748b;text-align:center;padding:20px">لا بيانات</p>';}
+    else{
+      const total=data.reduce((s,d)=>s+d.value,0);
+      let svgPie='', angle=0;
+      data.forEach(d=>{
+        const pct=d.value/total; const a1=angle*Math.PI*2; const a2=(angle+pct)*Math.PI*2;
+        const x1=Math.cos(a1-Math.PI/2)*70+90, y1=Math.sin(a1-Math.PI/2)*70+90;
+        const x2=Math.cos(a2-Math.PI/2)*70+90, y2=Math.sin(a2-Math.PI/2)*70+90;
+        const lg=pct>0.5?1:0;
+        svgPie+=`<path d="M90,90 L${x1},${y1} A70,70 0 ${lg},1 ${x2},${y2} Z" fill="${d.color}" opacity=".9"/>`;
+        angle+=pct;
+      });
+      content=`<svg viewBox="0 0 180 180" width="180" style="display:block;margin:0 auto 12px"><circle cx="90" cy="90" r="70" fill="#0d1117"/>${svgPie}<circle cx="90" cy="90" r="35" fill="#0d1117"/></svg>`
+        +data.map(d=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1a2535"><div style="display:flex;gap:7px;align-items:center"><div style="width:9px;height:9px;border-radius:2px;background:${d.color}"></div><span style="font-size:12px">${d.name}</span></div><span style="font-size:12px;font-weight:600">${fmtIQD(d.value)}</span></div>`).join('');
+    }
+  }
+  if(tab==='bar'){
+    const barData=[];
+    for(let i=5;i>=0;i--){const mm=(m-i+12)%12;const yy=m-i<0?y-1:y;const mt=S.txs.filter(t=>{const dd=new Date(t.date);return dd.getMonth()===mm&&dd.getFullYear()===yy;});barData.push({name:MONTHS[mm].slice(0,3),exp:mt.filter(t=>t.type==='expense').reduce((s,t)=>s+toIQD(t.amount,t.currency),0),inc:mt.filter(t=>t.type==='income').reduce((s,t)=>s+toIQD(t.amount,t.currency),0)});}
+    const maxV=Math.max(...barData.flatMap(d=>[d.exp,d.inc]),1);
+    const W=320, H=120, bW=20, gap=12, grpW=bW*2+gap, totalW=barData.length*(grpW+8);
+    let svg=`<svg viewBox="0 0 ${W} ${H+30}" width="100%" style="overflow:visible">`;
+    barData.forEach((d,i)=>{
+      const x=i*(grpW+10)+10;
+      const h1=Math.round((d.inc/maxV)*(H-10)); const h2=Math.round((d.exp/maxV)*(H-10));
+      svg+=`<rect x="${x}" y="${H-h1}" width="${bW}" height="${h1}" fill="#10b981" rx="3"/>`;
+      svg+=`<rect x="${x+bW+4}" y="${H-h2}" width="${bW}" height="${h2}" fill="#ef4444" rx="3"/>`;
+      svg+=`<text x="${x+bW+2}" y="${H+16}" text-anchor="middle" fill="#64748b" font-size="9" font-family="Tajawal">${d.name}</text>`;
+    });
+    svg+='</svg>';
+    content=`<p style="font-size:12px;margin-bottom:8px">بالألف د.ع</p>${svg}<div class="row" style="gap:12px;margin-top:8px"><span style="font-size:11px"><span style="color:#10b981">■</span> دخل</span><span style="font-size:11px"><span style="color:#ef4444">■</span> مصاريف</span></div>`;
+  }
+  if(tab==='top5'){
+    const top5=[...mExp].sort((a,b)=>toIQD(b.amount,b.currency)-toIQD(a.amount,a.currency)).slice(0,5);
+    content=top5.length?top5.map((tx,i)=>{const cat=getCat(tx.category);return`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #1a2535"><div class="row" style="gap:9px"><span style="color:#f59e0b;font-weight:900;font-size:15px;min-width:20px">#${i+1}</span><div><div style="font-size:12px;font-weight:600">${tx.note||cat.l}</div><div style="color:#64748b;font-size:10px">${tx.date}</div></div></div><span style="color:#ef4444;font-weight:700;font-size:13px">${fmt(tx.amount,tx.currency)}</span></div>`;}).join(''):'<p style="color:#64748b;text-align:center;padding:20px">لا بيانات</p>';
+  }
+  if(tab==='budget'){
+    const addBtnHTML=`<button class="btn btn-blue btn-sm" onclick="openModal('addBudget')">+ تحديد</button>`;
+    content=S.budgets.length?S.budgets.map(b=>{const cat=getCat(b.catId);const sp=catAcc[b.catId]||0;const bIQD=b.currency==='USD'?b.amount*S.cfg.rate:b.amount;const pct=Math.min(100,Math.round(sp/bIQD*100));const over=sp>bIQD;return`<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;font-weight:600">${cat.l}</span><span style="font-size:11px;color:${over?'#ef4444':'#64748b'}">${fmtIQD(sp)} / ${fmtIQD(bIQD)}</span></div><div class="bar"><div class="bar-fill" style="width:${pct}%;background:${over?'#ef4444':pct>75?'#f59e0b':'#10b981'}"></div></div><div style="display:flex;justify-content:space-between;margin-top:3px"><span style="font-size:10px;color:${over?'#ef4444':pct>75?'#f59e0b':'#64748b'}">${over?'⚠️ تجاوزت!':pct>75?'⚡ اقتربت':pct+'%'}</span><button onclick="delBudget('${b.id}')" style="background:none;border:none;color:#64748b;font-size:11px;cursor:pointer">✕</button></div></div>`;}).join(''):'<p style="color:#64748b;text-align:center;padding:15px">لم تحدد ميزانية بعد</p>';
+    content=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-weight:600;font-size:13px">🎯 الميزانية الشهرية</span>${addBtnHTML}</div>${content}`;
+  }
+
+  return `
+  <div class="page">
+    <p style="font-weight:800;font-size:18px;margin-bottom:10px">📊 ${MONTHS[m]}</p>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn btn-sm" style="flex:1;background:#10b98120;border:1px solid #10b98144;color:#10b981" onclick="exportExcel()">📊 Excel</button>
+      <button class="btn btn-sm" style="flex:1;background:#0ea5e920;border:1px solid #0ea5e944;color:#0ea5e9" onclick="exportPDF()">📄 PDF</button>
+    </div>
+    <div class="card row" style="justify-content:space-around;margin-bottom:10px">
+      <div class="stat"><div class="stat-label">الدخل</div><div style="color:#10b981;font-weight:800;font-size:13px">${fmtIQD(tI)}</div></div>
+      <div class="divider"></div>
+      <div class="stat"><div class="stat-label">المصاريف</div><div style="color:#ef4444;font-weight:800;font-size:13px">${fmtIQD(tE)}</div></div>
+      <div class="divider"></div>
+      <div class="stat"><div class="stat-label">الصافي</div><div style="color:${tI-tE>=0?'#10b981':'#ef4444'};font-weight:800;font-size:13px">${fmtIQD(tI-tE)}</div></div>
+    </div>
+    <div class="row" style="margin-bottom:10px;gap:4px">
+      ${tabs.map(([id,l])=>`<button onclick="S.reportTab='${id}';render()" style="flex:1;padding:7px 2px;background:${tab===id?'#0ea5e9':'none'};border:1px solid ${tab===id?'#0ea5e9':'#1a2535'};color:${tab===id?'white':'#64748b'};border-radius:8px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit">${l}</button>`).join('')}
+    </div>
+    <div class="card">${content}</div>
+  </div>`;
+}
+
+// ═══ GOALS & DEBTS ═══
+function pgGoals() {
+  const tab=S.goalsTab;
+  let content='';
+  if(tab==='goals'){
+    content=S.goals.length?S.goals.map(g=>{const pct=Math.min(100,Math.round(g.current/g.target*100));return`
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-weight:700;font-size:14px">${g.name}</span><span style="color:${pct>=100?'#10b981':'#f59e0b'};font-weight:800">${pct}%</span></div>
+      <div class="bar" style="height:10px;margin-bottom:6px"><div class="bar-fill" style="width:${pct}%;background:${pct>=100?'#10b981':'#0ea5e9'}"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#64748b;margin-bottom:8px"><span>${fmt(g.current,g.currency)}</span><span>الهدف: ${fmt(g.target,g.currency)}</span></div>
+      ${pct>=100?'<p style="color:#10b981;font-size:12px;text-align:center;margin-bottom:8px">🎉 مبروك! حققت الهدف</p>':''}
+      <div class="row">
+        <button class="btn btn-sm" style="flex:1;background:#10b98120;color:#10b981;border:1px solid #10b98144" onclick="addToGoal('${g.id}')">+ إضافة</button>
+        <button class="btn btn-sm" style="flex:1;background:#ef444420;color:#ef4444;border:1px solid #ef444444" onclick="delGoal('${g.id}')">🗑️ حذف</button>
+      </div>
+    </div>`;}).join(''):'<p style="color:#64748b;text-align:center;padding:30px">لا توجد أهداف</p>';
+  }
+  if(tab==='debts'){
+    const owe=S.debts.filter(d=>d.type==='owe'&&!d.paid).reduce((s,d)=>s+toIQD(d.amount,d.currency),0);
+    const owed=S.debts.filter(d=>d.type==='owed'&&!d.paid).reduce((s,d)=>s+toIQD(d.amount,d.currency),0);
+    content=`<div class="row" style="margin-bottom:10px">
+      <div style="flex:1;background:#ef444412;border:1px solid #ef444430;border-radius:10px;padding:10px;text-align:center"><div style="color:#ef4444;font-size:10px">💸 عليك</div><div style="color:#ef4444;font-weight:700;font-size:12px">${fmtIQD(owe)}</div></div>
+      <div style="flex:1;background:#10b98112;border:1px solid #10b98130;border-radius:10px;padding:10px;text-align:center"><div style="color:#10b981;font-size:10px">💰 لك</div><div style="color:#10b981;font-weight:700;font-size:12px">${fmtIQD(owed)}</div></div>
+    </div>`+(S.debts.length?S.debts.map(d=>`
+    <div class="card" style="margin-bottom:8px;opacity:${d.paid?.55:1}">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div><div style="font-weight:600;font-size:13px">${d.name}</div><div style="color:#64748b;font-size:10px">${d.date}${d.dueDate?' · استحقاق: '+d.dueDate:''}${d.note?' · '+d.note:''}</div></div>
+        <div style="text-align:end"><div style="font-weight:700;color:${d.type==='owe'?'#ef4444':'#10b981'};font-size:13px">${d.type==='owe'?'⬇️ عليك':'⬆️ لك'} ${fmt(d.amount,d.currency)}</div>${d.paid?'<div style="color:#10b981;font-size:10px">✅ مسدد</div>':''}</div>
+      </div>
+      ${!d.paid?`<div class="row" style="margin-top:8px">
+        <button class="btn btn-sm" style="flex:1;background:#10b98120;color:#10b981;border:1px solid #10b98144" onclick="payDebt('${d.id}')">✅ سدّده</button>
+        <button class="btn btn-sm" style="flex:1;background:#ef444420;color:#ef4444;border:1px solid #ef444444" onclick="delDebt('${d.id}')">🗑️ حذف</button>
+      </div>`:''}
+    </div>`).join(''):'<p style="color:#64748b;text-align:center;padding:30px">لا توجد ديون</p>');
+  }
+  return `
+  <div class="page">
+    <div class="row" style="justify-content:space-between;margin-bottom:12px">
+      <span style="font-weight:800;font-size:18px">🎯 الأهداف والديون</span>
+      <div class="row" style="gap:6px">
+        <button class="btn btn-blue btn-sm" onclick="openModal(tab==='goals'?'addGoal':'addDebt')" id="add-btn">+ جديد</button>
+        ${tab==='debts'?'<button class="btn btn-sm" style="background:#f59e0b20;border:1px solid #f59e0b44;color:#f59e0b" onclick="openModal(\'loanCalc\')">🧮</button>':''}
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:14px">
+      <button onclick="S.goalsTab='goals';render()" style="flex:1;padding:9px;background:${tab==='goals'?'#0ea5e9':'none'};border:1px solid ${tab==='goals'?'#0ea5e9':'#1a2535'};color:${tab==='goals'?'white':'#64748b'};border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🎯 الأهداف</button>
+      <button onclick="S.goalsTab='debts';render()" style="flex:1;padding:9px;background:${tab==='debts'?'#f59e0b':'none'};border:1px solid ${tab==='debts'?'#f59e0b':'#1a2535'};color:${tab==='debts'?'white':'#64748b'};border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💳 الديون</button>
+    </div>
+    ${content}
+  </div>`;
+}
+
+// ═══ SETTINGS PAGE ═══
+function pgSettings() {
+  const tab=S.settingsTab;
+  const tabs=[['wallets','💼 محافظ'],['rec','🔁 متكررة'],['cats','🏷️ فئات'],['notif','🔔 إشعارات'],['backup','💾 نسخ']];
+  let content='';
+  if(tab==='wallets'){
+    content=`<button class="btn btn-blue" style="width:100%;margin-bottom:10px" onclick="openModal('addWallet')">+ إضافة محفظة</button>`
+    +S.wallets.map((w,i)=>`<div class="card" style="margin-bottom:8px;border-right:3px solid ${WCOLS[i%WCOLS.length]}"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600;font-size:13px">${w.name}</div><div style="color:#64748b;font-size:11px">${w.currency} · ${fmt(w.balance,w.currency)}</div></div><div class="row" style="gap:6px"><button class="btn btn-sm btn-ghost" onclick="openModal('editWallet','${w.id}')">تعديل</button>${S.wallets.length>1?`<button class="btn btn-sm" style="background:#ef444420;color:#ef4444;border:1px solid #ef444444" onclick="delWallet('${w.id}')">🗑️</button>`:''}</div></div></div>`).join('');
+  }
+  if(tab==='rec'){
+    content=`<button class="btn btn-blue" style="width:100%;margin-bottom:10px" onclick="openModal('addRec')">+ إضافة دفعة متكررة</button>`
+    +(S.rec.length?S.rec.map(r=>{const w=getWallet(r.walletId);return`<div class="card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><div><div style="font-weight:600;font-size:13px">${r.name}</div><div style="color:#64748b;font-size:10px">يوم ${r.day} · ${w.name} · ${r.type==='expense'?'مصروف':'دخل'}</div></div><div class="row" style="gap:6px"><span style="color:${r.type==='expense'?'#ef4444':'#10b981'};font-weight:700;font-size:13px">${fmt(r.amount,r.currency)}</span><button onclick="delRec('${r.id}')" style="background:#ef444420;border:1px solid #ef444444;color:#ef4444;border-radius:7px;padding:4px 8px;cursor:pointer">✕</button></div></div><button class="btn btn-ghost btn-sm" style="width:100%" onclick="applyRec('${r.id}')">▶️ طبّق الآن</button></div>`;}).join(''):'<p style="color:#64748b;text-align:center;padding:20px">لا توجد دفعات</p>');
+  }
+  if(tab==='cats'){
+    content=`<button class="btn btn-blue" style="width:100%;margin-bottom:10px" onclick="openModal('addCat')">+ إضافة فئة</button>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">${S.cats.map(cat=>`<div style="background:${cat.c}20;border:1px solid ${cat.c}44;border-radius:10px;padding:8px 12px;font-size:12px;display:flex;align-items:center;gap:6px">${cat.l}${!DEF_CATS.find(d=>d.id===cat.id)?`<button onclick="delCat('${cat.id}')" style="background:none;border:none;color:#ef4444;font-size:14px;cursor:pointer;padding:0">✕</button>`:''}</div>`).join('')}</div>`;
+  }
+  if(tab==='notif'){
+    content=`
+    <div class="card" style="margin-bottom:10px">
+      <p style="font-weight:600;font-size:13px;margin-bottom:8px">🔔 إشعارات المتصفح</p>
+      <button class="btn btn-ghost" style="width:100%;color:#f59e0b;border-color:#f59e0b44;background:#f59e0b20" onclick="requestNotif()">🔔 تفعيل الإشعارات</button>
+    </div>
+    <div class="card" style="margin-bottom:10px">
+      <p style="font-weight:600;font-size:13px;margin-bottom:10px">⏰ مواعيد الإشعارات</p>
+      <div class="row" style="margin-bottom:10px">
+        <span style="font-size:12px;min-width:80px">🌅 الصباح:</span>
+        <input type="number" id="hm" value="${S.cfg.hourMorning||8}" min="0" max="23" style="flex:1">
+        <label style="display:flex;gap:5px;align-items:center;font-size:12px;white-space:nowrap"><input type="checkbox" id="nm" ${S.cfg.notifMorning?'checked':''} style="width:auto"> مفعّل</label>
+      </div>
+      <div class="row" style="margin-bottom:12px">
+        <span style="font-size:12px;min-width:80px">🌙 المساء:</span>
+        <input type="number" id="he" value="${S.cfg.hourEvening||21}" min="0" max="23" style="flex:1">
+        <label style="display:flex;gap:5px;align-items:center;font-size:12px;white-space:nowrap"><input type="checkbox" id="ne" ${S.cfg.notifEvening?'checked':''} style="width:auto"> مفعّل</label>
+      </div>
+      <button class="btn btn-blue" style="width:100%" onclick="saveNotifCfg()">💾 حفظ</button>
+    </div>
+    <div class="card">
+      <p style="font-weight:600;font-size:13px;margin-bottom:6px">💱 سعر صرف الدولار</p>
+      <div class="row">
+        <input type="number" id="rate-input" value="${S.cfg.rate}" style="flex:1">
+        <button class="btn btn-blue btn-sm" onclick="saveRate()" style="white-space:nowrap">حفظ</button>
+      </div>
+    </div>`;
+  }
+  if(tab==='backup'){
+    content=`
+    <div class="card" style="margin-bottom:10px"><p style="font-weight:600;font-size:13px;margin-bottom:6px">📤 نسخة احتياطية</p><button class="btn btn-ghost" style="width:100%;color:#10b981;border-color:#10b98144;background:#10b98120" onclick="exportBackup()">📥 تحميل النسخة</button></div>
+    <div class="card" style="margin-bottom:10px"><p style="font-weight:600;font-size:13px;margin-bottom:6px">📂 استعادة</p><button class="btn btn-ghost" style="width:100%;color:#0ea5e9;border-color:#0ea5e944;background:#0ea5e920" onclick="document.getElementById('bk-file').click()">📂 استعادة من ملف</button><input type="file" id="bk-file" accept=".json" style="display:none" onchange="importBackup(this)"></div>
+    <div class="card"><button class="btn" style="width:100%;background:#ef444420;border:1px solid #ef444444;color:#ef4444" onclick="clearAll()">⚠️ مسح جميع البيانات</button></div>`;
+  }
+  return `
+  <div class="page">
+    <p style="font-weight:800;font-size:18px;margin-bottom:12px">⚙️ الإعدادات</p>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px">${tabs.map(([id,l])=>`<button onclick="S.settingsTab='${id}';render()" style="flex:1;padding:7px 2px;min-width:60px;background:${tab===id?'#0ea5e9':'none'};border:1px solid ${tab===id?'#0ea5e9':'#1a2535'};color:${tab===id?'white':'#64748b'};border-radius:7px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit">${l}</button>`).join('')}</div>
+    ${content}
+  </div>`;
+}
+
+// ═══ MODAL SYSTEM ═══
+function openModal(type, arg='') {
+  const mc = document.getElementById('modal-container');
+  let html = '';
+  if(type==='addTx')    html = modalTx(arg);
+  if(type==='transfer') html = modalTransfer();
+  if(type==='addWallet')html = modalWallet();
+  if(type==='editWallet')html = modalWallet(S.wallets.find(w=>w.id===arg));
+  if(type==='addGoal')  html = modalGoal();
+  if(type==='addDebt')  html = modalDebt();
+  if(type==='addRec')   html = modalRec();
+  if(type==='addCat')   html = modalCat();
+  if(type==='loanCalc') html = modalLoan();
+  if(type==='addBudget')html = modalBudget();
+  mc.innerHTML = `<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modal-bar"></div>${html}</div></div>`;
+  setTimeout(()=>{
+    if(type==='addTx'){ selectCat(arg==='income'?'salary':'food'); syncWalletCur(); }
+    if(type==='addCat'){ selectEmoji('💰'); }
+  },0);
+  setTimeout(()=>{
+    if(type==='addTx'){ selectCat(arg==='income'?'salary':'food'); syncWalletCur(); }
+    if(type==='addCat'){ selectEmoji('💰'); }
+  },0);
+  // Initialize after DOM update
+  if(type==='addTx'){ setTimeout(()=>{ selectCat(arg==='income'?'salary':'food'); syncWalletCur(); },10); }
+  if(type==='addCat'){ setTimeout(()=>selectEmoji('💰'),10); }
+}
+function closeModal(){ document.getElementById('modal-container').innerHTML=''; }
+
+function modalTx(initType='expense') {
+  const type = initType||'expense';
+  return `
+  <p style="font-weight:800;font-size:16px;margin-bottom:12px" id="tx-title">${type==='income'?'⬆️ إضافة دخل':'⬇️ تسجيل مصروف'}</p>
+  <div class="row" style="margin-bottom:12px">
+    <button id="btn-exp" onclick="setTxType('expense')" style="flex:1;padding:10px;background:${type==='expense'?'#ef4444':'#131a26'};color:${type==='expense'?'white':'#64748b'};border:1px solid ${type==='expense'?'#ef4444':'#1a2535'};border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">⬇️ مصروف</button>
+    <button id="btn-inc" onclick="setTxType('income')" style="flex:1;padding:10px;background:${type==='income'?'#10b981':'#131a26'};color:${type==='income'?'white':'#64748b'};border:1px solid ${type==='income'?'#10b981':'#1a2535'};border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">⬆️ دخل</button>
+  </div>
+  <input type="hidden" id="tx-type" value="${type}">
+  <label class="lbl">المحفظة</label>
+  <select id="tx-wallet" onchange="updateCurFromWallet()" style="margin-bottom:10px">
+    ${S.wallets.map(w=>`<option value="${w.id}">${w.name} — ${fmt(w.balance,w.currency)}</option>`).join('')}
+  </select>
+  <div class="row" style="margin-bottom:4px">
+    <div style="flex:2"><label class="lbl">المبلغ</label><input type="number" id="tx-amt" placeholder="0" inputmode="decimal" oninput="updateEquiv()"></div>
+    <div style="flex:1"><label class="lbl">العملة</label><select id="tx-cur" onchange="updateEquiv()"><option value="IQD">🇮🇶 د.ع</option><option value="USD">🇺🇸 $</option></select></div>
+  </div>
+  <div id="tx-equiv" style="color:#64748b;font-size:11px;margin-bottom:8px"></div>
+  <label class="lbl">الفئة</label>
+  <div class="cat-grid" id="cat-grid">
+    ${S.cats.map(c=>`<button class="cat-btn" onclick="selectCat('${c.id}')" id="cat-${c.id}">${c.l}</button>`).join('')}
+  </div>
+  <input type="hidden" id="tx-cat" value="${type==='income'?'salary':'food'}">
+  <label class="lbl">ملاحظة</label>
+  <div class="row" style="margin-bottom:10px">
+    <input id="tx-note" placeholder="وصف اختياري..." style="flex:1">
+    <button onclick="startVoice()" id="mic-btn" style="background:#131a26;border:1px solid #1a2535;color:#64748b;border-radius:10px;padding:8px 13px;font-size:18px;cursor:pointer">🎤</button>
+  </div>
+  <label class="lbl">التاريخ</label>
+  <input type="date" id="tx-date" value="${today()}" style="margin-bottom:14px">
+  <button class="btn btn-green" style="width:100%;font-size:15px" id="tx-submit-btn" onclick="submitTx()">✅ تسجيل</button>
+  `;
+}
+
+function modalTransfer() {
+  return `
+  <p style="font-weight:800;font-size:16px;margin-bottom:12px">↔️ تحويل</p>
+  <label class="lbl">من</label>
+  <select id="tr-from" style="margin-bottom:10px">${S.wallets.map(w=>`<option value="${w.id}">${w.name} (${fmt(w.balance,w.currency)})</option>`).join('')}</select>
+  <label class="lbl">إلى</label>
+  <select id="tr-to" style="margin-bottom:10px">${S.wallets.map((w,i)=>`<option value="${w.id}"${i===1?' selected':''}>${w.name} (${fmt(w.balance,w.currency)})</option>`).join('')}</select>
+  <label class="lbl">المبلغ</label>
+  <input type="number" id="tr-amt" placeholder="0" style="margin-bottom:14px">
+  <button class="btn btn-blue" style="width:100%;font-size:15px" onclick="submitTransfer()">✅ تحويل</button>`;
+}
+
+function modalWallet(w=null) {
+  return `
+  <p style="font-weight:800;font-size:16px;margin-bottom:12px">${w?'✏️ تعديل المحفظة':'💼 محفظة جديدة'}</p>
+  <input type="hidden" id="wlt-id" value="${w?.id||''}">
+  <label class="lbl">الاسم</label>
+  <input id="wlt-name" value="${w?.name||''}" placeholder="اسم المحفظة" style="margin-bottom:10px">
+  <label class="lbl">العملة</label>
+  <select id="wlt-cur" style="margin-bottom:10px"><option value="IQD"${w?.currency==='IQD'?' selected':''}>🇮🇶 دينار عراقي</option><option value="USD"${w?.currency==='USD'?' selected':''}>🇺🇸 دولار</option></select>
+  <label class="lbl">الحد الأدنى (0 = معطّل)</label>
+  <input type="number" id="wlt-min" value="${w?.minBalance||0}" style="margin-bottom:14px">
+  <button class="btn btn-blue" style="width:100%;font-size:15px" onclick="submitWallet()">✅ حفظ</button>`;
+}
+
+function modalGoal() {
+  return `
+  <p style="font-weight:800;font-size:16px;margin-bottom:12px">🎯 هدف جديد</p>
+  <label class="lbl">اسم الهدف</label>
+  <input id="gl-name" placeholder="سيارة، سفر..." style="margin-bottom:10px">
+  <div class="row" style="margin-bottom:14px">
+    <div style="flex:2"><label class="lbl">المبلغ المطلوب</label><input type="number" id="gl-tgt" placeholder="0"></div>
+    <div style="flex:1"><label class="lbl">العملة</label><select id="gl-cur"><option value="IQD">د.ع</option><option value="USD">$</option></select></div>
+  </div>
+  <button class="btn btn-green" style="width:100%;font-size:15px" onclick="submitGoal()">✅ إضافة</button>`;
+}
+
+function modalDebt() {
+  return `
+  <p style="font-weight:800;font-size:16px;margin-bottom:12px">💳 إضافة دين</p>
+  <input type="hidden" id="dbt-type" value="owe">
+  <div class="row" style="margin-bottom:12px">
+    <button id="dbt-owe-btn" onclick="setDebtType('owe')" style="flex:1;padding:10px;background:#ef4444;color:white;border:1px solid #ef4444;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit">⬇️ عليّ</button>
+    <button id="dbt-owed-btn" onclick="setDebtType('owed')" style="flex:1;padding:10px;background:#131a26;color:#64748b;border:1px solid #1a2535;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit">⬆️ لي</button>
+  </div>
+  <label class="lbl">الاسم</label>
+  <input id="dbt-name" placeholder="اسم الشخص" style="margin-bottom:10px">
+  <div class="row" style="margin-bottom:10px">
+    <div style="flex:2"><label class="lbl">المبلغ</label><input type="number" id="dbt-amt" placeholder="0"></div>
+    <div style="flex:1"><label class="lbl">العملة</label><select id="dbt-cur"><option value="IQD">د.ع</option><option value="USD">$</option></select></div>
+  </div>
+  <label class="lbl">تاريخ الاستحقاق</label>
+  <input type="date" id="dbt-due" style="margin-bottom:10px">
+  <label class="lbl">ملاحظة</label>
+  <input id="dbt-note" placeholder="اختياري" style="margin-bottom:14px">
+  <button class="btn btn-red" style="width:100%;font-size:15px" id="dbt-submit" onclick="submitDebt()">✅ إضافة</button>`;
+}
+
+function modalRec() {
+  return `
+  <p style="font-weight:800;font-size:16px;margin-bottom:12px">🔁 دفعة متكررة</p>
+  <input type="hidden" id="rec-type" value="expense">
+  <label class="lbl">الاسم (يدوي)</label>
+  <input id="rec-name" placeholder="نتفليكس، إيجار، راتب..." style="margin-bottom:10px">
+  <div class="row" style="margin-bottom:10px">
+    <button onclick="setRecType('expense')" id="rec-exp-btn" style="flex:1;padding:9px;background:#ef4444;color:white;border:1px solid #ef4444;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">⬇️ مصروف</button>
+    <button onclick="setRecType('income')" id="rec-inc-btn" style="flex:1;padding:9px;background:#131a26;color:#64748b;border:1px solid #1a2535;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">⬆️ دخل</button>
+  </div>
+  <div class="row" style="margin-bottom:10px">
+    <div style="flex:2"><label class="lbl">المبلغ</label><input type="number" id="rec-amt" placeholder="0"></div>
+    <div style="flex:1"><label class="lbl">العملة</label><select id="rec-cur"><option value="IQD">د.ع</option><option value="USD">$</option></select></div>
+  </div>
+  <label class="lbl">المحفظة</label>
+  <select id="rec-wallet" style="margin-bottom:10px">${S.wallets.map(w=>`<option value="${w.id}">${w.name}</option>`).join('')}</select>
+  <label class="lbl">الفئة</label>
+  <select id="rec-cat" style="margin-bottom:10px">${S.cats.map(c=>`<option value="${c.id}">${c.l}</option>`).join('')}</select>
+  <label class="lbl">يوم التطبيق (1-31)</label>
+  <input type="number" id="rec-day" value="1" min="1" max="31" style="margin-bottom:14px">
+  <button class="btn btn-blue" style="width:100%;font-size:15px" onclick="submitRec()">✅ إضافة</button>`;
+}
+
+function modalCat() {
+  const EMOJIS=['💰','🏠','🚗','🍔','👕','💊','📚','🎮','✈️','🎁','💼','⚡','🌊','📱','🐕','☕','🎬','🏋️','🎸','🛒'];
+  return `
+  <p style="font-weight:800;font-size:16px;margin-bottom:12px">🏷️ فئة جديدة</p>
+  <input type="hidden" id="cat-emoji" value="💰">
+  <label class="lbl">اسم الفئة</label>
+  <input id="cat-name" placeholder="اسم الفئة" style="margin-bottom:10px">
+  <label class="lbl">الأيقونة</label>
+  <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px">
+    ${EMOJIS.map(e=>`<button onclick="selectEmoji('${e}')" id="em-${e}" style="font-size:20px;padding:6px 8px;background:#131a26;border:1px solid #1a2535;border-radius:8px;cursor:pointer">${e}</button>`).join('')}
+  </div>
+  <label class="lbl">اللون</label>
+  <input type="color" id="cat-color" value="#0ea5e9" style="height:42px;padding:3px;margin-bottom:14px">
+  <button class="btn btn-blue" style="width:100%;font-size:15px" onclick="submitCat()">✅ إضافة</button>
+  `;
+}
+
+function modalLoan() {
+  return `
+  <p style="font-weight:800;font-size:16px;margin-bottom:12px">🧮 حاسبة القرض</p>
+  <div class="row" style="margin-bottom:10px">
+    <div style="flex:2"><label class="lbl">مبلغ القرض</label><input type="number" id="ln-p" placeholder="0"></div>
+    <div style="flex:1"><label class="lbl">العملة</label><select id="ln-cur"><option value="IQD">د.ع</option><option value="USD">$</option></select></div>
+  </div>
+  <div class="row" style="margin-bottom:12px">
+    <div style="flex:1"><label class="lbl">فائدة % سنوياً</label><input type="number" id="ln-r" placeholder="5"></div>
+    <div style="flex:1"><label class="lbl">الأشهر</label><input type="number" id="ln-n" placeholder="24"></div>
+  </div>
+  <button class="btn btn-blue" style="width:100%;margin-bottom:12px" onclick="calcLoan()">🧮 احسب</button>
+  <div id="loan-result"></div>`;
+}
+
+function modalBudget() {
+  return `
+  <p style="font-weight:800;font-size:16px;margin-bottom:12px">🎯 تحديد ميزانية</p>
+  <label class="lbl">الفئة</label>
+  <select id="bgt-cat" style="margin-bottom:10px">${S.cats.filter(c=>c.id!=='transfer'&&c.id!=='salary').map(c=>`<option value="${c.id}">${c.l}</option>`).join('')}</select>
+  <div class="row" style="margin-bottom:14px">
+    <div style="flex:2"><label class="lbl">المبلغ</label><input type="number" id="bgt-amt" placeholder="0"></div>
+    <div style="flex:1"><label class="lbl">العملة</label><select id="bgt-cur"><option value="IQD">د.ع</option><option value="USD">$</option></select></div>
+  </div>
+  <button class="btn btn-green" style="width:100%;font-size:15px" onclick="submitBudget()">✅ حفظ</button>`;
+}
+
+// ═══ ACTIONS ═══
+function setTxType(t) {
+  document.getElementById('tx-type').value=t;
+  document.getElementById('tx-title').textContent=t==='income'?'⬆️ إضافة دخل':'⬇️ تسجيل مصروف';
+  document.getElementById('btn-exp').style.background=t==='expense'?'#ef4444':'#131a26';
+  document.getElementById('btn-exp').style.color=t==='expense'?'white':'#64748b';
+  document.getElementById('btn-inc').style.background=t==='income'?'#10b981':'#131a26';
+  document.getElementById('btn-inc').style.color=t==='income'?'white':'#64748b';
+  document.getElementById('tx-submit-btn').style.background=t==='income'?'#10b981':'#ef4444';
+  document.getElementById('tx-submit-btn').textContent=t==='income'?'✅ إضافة':'✅ تسجيل';
+  selectCat(t==='income'?'salary':'food');
+}
+
+function syncWalletCur() {
+  const sel=document.getElementById('tx-wallet');
+  if(!sel) return;
+  const w=S.wallets.find(ww=>ww.id===sel.value);
+  if(w) {const cur=document.getElementById('tx-cur');if(cur) cur.value=w.currency;}
+}
+
+function updateCurFromWallet() { syncWalletCur(); updateEquiv(); }
+
+function updateEquiv() {
+  const amt=parseFloat(document.getElementById('tx-amt')?.value||0);
+  const cur=document.getElementById('tx-cur')?.value||'IQD';
+  const el=document.getElementById('tx-equiv');
+  if(el&&amt>0) el.textContent='≈ '+(cur==='USD'?fmtIQD(amt*S.cfg.rate):'$'+(amt/S.cfg.rate).toFixed(2));
+  else if(el) el.textContent='';
+}
+
+function selectCat(id) {
+  document.getElementById('tx-cat').value=id;
+  document.querySelectorAll('.cat-btn').forEach(b=>{b.style.background='#131a26';b.style.color='#64748b';b.style.borderColor='#1a2535';});
+  const cat=S.cats.find(c=>c.id===id);
+  const btn=document.getElementById('cat-'+id);
+  if(btn&&cat){btn.style.background=cat.c+'44';btn.style.color=cat.c;btn.style.borderColor=cat.c;}
+}
+
+function selectEmoji(e) {
+  document.getElementById('cat-emoji').value=e;
+  document.querySelectorAll('[id^="em-"]').forEach(b=>{b.style.background='#131a26';b.style.borderColor='#1a2535';});
+  const btn=document.getElementById('em-'+e);
+  if(btn){btn.style.background='#0ea5e933';btn.style.borderColor='#0ea5e9';}
+}
+
+function startVoice() {
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast('المتصفح لا يدعم الصوت','warn');return;}
+  const r=new SR();r.lang='ar-IQ';r.start();
+  document.getElementById('mic-btn').textContent='🔴';
+  r.onresult=e=>{document.getElementById('tx-note').value=e.results[0][0].transcript;document.getElementById('mic-btn').textContent='🎤';};
+  r.onerror=()=>{document.getElementById('mic-btn').textContent='🎤';};
+}
+
+function submitTx() {
+  const type=document.getElementById('tx-type').value;
+  const wId=document.getElementById('tx-wallet').value;
+  const amt=parseFloat(document.getElementById('tx-amt').value);
+  const cur=document.getElementById('tx-cur').value;
+  const cat=document.getElementById('tx-cat').value||'other';
+  const note=document.getElementById('tx-note').value;
+  const date=document.getElementById('tx-date').value;
+  if(!amt||amt<=0){toast('⚠️ أدخل مبلغاً صحيحاً','warn');return;}
+  S.txs.unshift({id:uid(),walletId:wId,amount:amt,currency:cur,type,category:cat,note,date:date||today()});
+  S.wallets=S.wallets.map(w=>w.id===wId?{...w,balance:w.balance+(type==='income'?1:-1)*amt}:w);
+  save('txs');save('wallets');
+  const w=S.wallets.find(ww=>ww.id===wId);
+  if(w&&w.minBalance>0&&w.balance<w.minBalance) toast('⚠️ '+w.name+': وصل للحد الأدنى!','warn');
+  else toast(type==='income'?'✅ تمت الإضافة':'✅ تم الخصم');
+  closeModal();render();
+}
+
+function submitTransfer() {
+  const fromId=document.getElementById('tr-from').value;
+  const toId=document.getElementById('tr-to').value;
+  const amt=parseFloat(document.getElementById('tr-amt').value);
+  if(!amt||amt<=0){toast('⚠️ أدخل مبلغاً','warn');return;}
+  if(fromId===toId){toast('⚠️ اختر محفظتين مختلفتين','warn');return;}
+  const from=S.wallets.find(w=>w.id===fromId), to=S.wallets.find(w=>w.id===toId);
+  let toAmt=amt;
+  if(from.currency==='USD'&&to.currency==='IQD') toAmt=amt*S.cfg.rate;
+  if(from.currency==='IQD'&&to.currency==='USD') toAmt=amt/S.cfg.rate;
+  S.wallets=S.wallets.map(w=>w.id===fromId?{...w,balance:w.balance-amt}:w.id===toId?{...w,balance:w.balance+toAmt}:w);
+  const d=today();
+  S.txs.unshift({id:uid(),walletId:fromId,amount:amt,currency:from.currency,type:'expense',category:'transfer',note:'→ '+to.name,date:d});
+  S.txs.unshift({id:uid(),walletId:toId,amount:toAmt,currency:to.currency,type:'income',category:'transfer',note:'← '+from.name,date:d});
+  save('wallets');save('txs');toast('✅ تم التحويل');closeModal();render();
+}
+
+function submitWallet() {
+  const id=document.getElementById('wlt-id').value;
+  const name=document.getElementById('wlt-name').value.trim();
+  const cur=document.getElementById('wlt-cur').value;
+  const minB=parseFloat(document.getElementById('wlt-min').value)||0;
+  if(!name){toast('⚠️ أدخل الاسم','warn');return;}
+  if(id) S.wallets=S.wallets.map(w=>w.id===id?{...w,name,currency:cur,minBalance:minB}:w);
+  else {if(S.wallets.length>=5){toast('⚠️ الحد الأقصى 5 محافظ','warn');return;}S.wallets.push({id:uid(),name,balance:0,currency:cur,minBalance:minB});}
+  save('wallets');toast('✅ تم');closeModal();render();
+}
+
+function submitGoal() {
+  const name=document.getElementById('gl-name').value.trim();
+  const tgt=parseFloat(document.getElementById('gl-tgt').value);
+  const cur=document.getElementById('gl-cur').value;
+  if(!name||!tgt||tgt<=0){toast('⚠️ أدخل البيانات','warn');return;}
+  S.goals.push({id:uid(),name,target:tgt,current:0,currency:cur});
+  save('goals');toast('✅ تمت الإضافة');closeModal();render();
+}
+
+function submitDebt() {
+  const type=document.getElementById('dbt-type').value;
+  const name=document.getElementById('dbt-name').value.trim();
+  const amt=parseFloat(document.getElementById('dbt-amt').value);
+  const cur=document.getElementById('dbt-cur').value;
+  const note=document.getElementById('dbt-note').value;
+  const due=document.getElementById('dbt-due').value;
+  if(!name||!amt||amt<=0){toast('⚠️ أدخل البيانات','warn');return;}
+  S.debts.push({id:uid(),name,amount:amt,currency:cur,type,note,dueDate:due,date:today(),paid:false});
+  save('debts');toast('✅ تمت الإضافة');closeModal();render();
+}
+
+function submitRec() {
+  const name=document.getElementById('rec-name').value.trim();
+  const amt=parseFloat(document.getElementById('rec-amt').value);
+  const cur=document.getElementById('rec-cur').value;
+  const type=document.getElementById('rec-type').value;
+  const wId=document.getElementById('rec-wallet').value;
+  const cat=document.getElementById('rec-cat').value;
+  const day=parseInt(document.getElementById('rec-day').value)||1;
+  if(!name||!amt||amt<=0){toast('⚠️ أدخل البيانات','warn');return;}
+  S.rec.push({id:uid(),name,amount:amt,currency:cur,type,walletId:wId,category:cat,day});
+  save('rec');toast('✅ تمت الإضافة');closeModal();render();
+}
+
+function submitCat() {
+  const label=document.getElementById('cat-name').value.trim();
+  const emoji=document.getElementById('cat-emoji').value;
+  const color=document.getElementById('cat-color').value;
+  if(!label){toast('⚠️ أدخل الاسم','warn');return;}
+  S.cats.push({id:'c_'+uid(),l:emoji+' '+label,c:color});
+  save('cats');toast('✅ تمت الإضافة');closeModal();render();
+}
+
+function submitBudget() {
+  const catId=document.getElementById('bgt-cat').value;
+  const amt=parseFloat(document.getElementById('bgt-amt').value);
+  const cur=document.getElementById('bgt-cur').value;
+  if(!amt||amt<=0){toast('⚠️ أدخل مبلغاً','warn');return;}
+  S.budgets=S.budgets.filter(b=>b.catId!==catId);
+  S.budgets.push({id:uid(),catId,amount:amt,currency:cur});
+  save('budgets');toast('✅ تم');closeModal();render();
+}
+
+function setDebtType(t) {
+  document.getElementById('dbt-type').value=t;
+  document.getElementById('dbt-owe-btn').style.background=t==='owe'?'#ef4444':'#131a26';
+  document.getElementById('dbt-owe-btn').style.color=t==='owe'?'white':'#64748b';
+  document.getElementById('dbt-owed-btn').style.background=t==='owed'?'#10b981':'#131a26';
+  document.getElementById('dbt-owed-btn').style.color=t==='owed'?'white':'#64748b';
+  document.getElementById('dbt-submit').style.background=t==='owe'?'#ef4444':'#10b981';
+}
+
+function setRecType(t) {
+  document.getElementById('rec-type').value=t;
+  document.getElementById('rec-exp-btn').style.background=t==='expense'?'#ef4444':'#131a26';
+  document.getElementById('rec-exp-btn').style.color=t==='expense'?'white':'#64748b';
+  document.getElementById('rec-inc-btn').style.background=t==='income'?'#10b981':'#131a26';
+  document.getElementById('rec-inc-btn').style.color=t==='income'?'white':'#64748b';
+}
+
+function calcLoan() {
+  const P=parseFloat(document.getElementById('ln-p').value);
+  const annR=parseFloat(document.getElementById('ln-r').value);
+  const n=parseInt(document.getElementById('ln-n').value);
+  const cur=document.getElementById('ln-cur').value;
+  if(!P||!n||P<=0||n<=0){toast('⚠️ أدخل البيانات','warn');return;}
+  const r=(annR/100)/12;
+  let monthly,total,interest;
+  if(r===0||isNaN(r)){monthly=P/n;total=P;interest=0;}
+  else{monthly=P*(r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);total=monthly*n;interest=total-P;}
+  let rows='';let bal=P;
+  for(let i=1;i<=Math.min(n,12);i++){const int_=bal*r;const prin=monthly-int_;bal-=prin;rows+=`<tr><td>${i}</td><td>${fmt(monthly,cur)}</td><td style="color:#ef4444">${fmt(int_,cur)}</td><td style="color:#10b981">${fmt(prin,cur)}</td><td style="color:#0ea5e9">${fmt(Math.max(0,bal),cur)}</td></tr>`;}
+  document.getElementById('loan-result').innerHTML=`
+  <div class="row" style="gap:6px;margin-bottom:10px">
+    <div style="flex:1;background:#0ea5e915;border-radius:9px;padding:9px;text-align:center"><div style="color:#64748b;font-size:9px">القسط</div><div style="color:#0ea5e9;font-weight:800;font-size:12px">${fmt(monthly,cur)}</div></div>
+    <div style="flex:1;background:#ef444415;border-radius:9px;padding:9px;text-align:center"><div style="color:#64748b;font-size:9px">الفوائد</div><div style="color:#ef4444;font-weight:800;font-size:12px">${fmt(interest,cur)}</div></div>
+    <div style="flex:1;background:#f59e0b15;border-radius:9px;padding:9px;text-align:center"><div style="color:#64748b;font-size:9px">الإجمالي</div><div style="color:#f59e0b;font-weight:800;font-size:12px">${fmt(total,cur)}</div></div>
+  </div>
+  <p style="font-weight:600;font-size:12px;margin-bottom:7px">جدول السداد (أول 12 شهر)</p>
+  <div style="overflow-x:auto"><table><thead><tr style="color:#64748b"><th>شهر</th><th>القسط</th><th>فائدة</th><th>أصل</th><th>رصيد</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function delTx(id) {
+  if(!confirm('حذف هذه المعاملة؟'))return;
+  const tx=S.txs.find(t=>t.id===id);
+  if(tx) S.wallets=S.wallets.map(w=>w.id===tx.walletId?{...w,balance:w.balance+(tx.type==='income'?-1:1)*tx.amount}:w);
+  S.txs=S.txs.filter(t=>t.id!==id);
+  save('txs');save('wallets');toast('🗑️ تم الحذف');render();
+}
+
+function delWallet(id){if(!confirm('حذف هذه المحفظة؟'))return;S.wallets=S.wallets.filter(w=>w.id!==id);save('wallets');toast('🗑️ تم الحذف');render();}
+function delGoal(id){if(!confirm('حذف هذا الهدف؟'))return;S.goals=S.goals.filter(g=>g.id!==id);save('goals');toast('🗑️ تم الحذف');render();}
+function delDebt(id){if(!confirm('حذف هذا الدين؟'))return;S.debts=S.debts.filter(d=>d.id!==id);save('debts');toast('🗑️ تم الحذف');render();}
+function payDebt(id){S.debts=S.debts.map(d=>d.id===id?{...d,paid:true}:d);save('debts');toast('✅ تم التسديد');render();}
+function delRec(id){S.rec=S.rec.filter(r=>r.id!==id);save('rec');toast('🗑️ تم الحذف');render();}
+function delCat(id){S.cats=S.cats.filter(c=>c.id!==id);save('cats');render();}
+function delBudget(id){S.budgets=S.budgets.filter(b=>b.id!==id);save('budgets');render();}
+
+function addToGoal(id){const a=parseFloat(prompt('المبلغ المراد إضافته:'));if(!isNaN(a)&&a>0){S.goals=S.goals.map(g=>g.id===id?{...g,current:g.current+a}:g);save('goals');render();}}
+
+function applyRec(id){
+  const r=S.rec.find(rr=>rr.id===id);
+  if(!r)return;
+  S.txs.unshift({id:uid(),walletId:r.walletId,amount:r.amount,currency:r.currency,type:r.type,category:r.category||'other',note:r.name,date:today()});
+  S.wallets=S.wallets.map(w=>w.id===r.walletId?{...w,balance:w.balance+(r.type==='income'?1:-1)*r.amount}:w);
+  save('txs');save('wallets');toast('✅ تم تطبيق "'+r.name+'"');render();
+}
+
+function dailySummary(){
+  const ds=today();
+  const sp=S.txs.filter(t=>t.date===ds&&t.type==='expense').reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+  const ea=S.txs.filter(t=>t.date===ds&&t.type==='income').reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+  const total=S.wallets.reduce((s,w)=>s+toIQD(w.balance,w.currency),0);
+  toast('📊 ملخص اليوم\n💸 صرفت: '+fmtIQD(sp)+'\n✅ أضفت: '+fmtIQD(ea)+'\n💰 رصيدك: '+fmtIQD(total),'info');
+  if('Notification'in window) Notification.requestPermission().then(p=>{if(p==='granted') new Notification('💰 ملخص يومك',{body:'صرفت: '+fmtIQD(sp)+' | رصيدك: '+fmtIQD(total)});});
+}
+
+function requestNotif(){if('Notification'in window) Notification.requestPermission().then(p=>toast(p==='granted'?'✅ تم التفعيل!':'❌ تم الرفض'));}
+
+function saveNotifCfg(){
+  S.cfg.hourMorning=parseInt(document.getElementById('hm').value)||8;
+  S.cfg.hourEvening=parseInt(document.getElementById('he').value)||21;
+  S.cfg.notifMorning=document.getElementById('nm').checked;
+  S.cfg.notifEvening=document.getElementById('ne').checked;
+  save('cfg');toast('✅ تم الحفظ');
+}
+
+function saveRate(){
+  const r=parseFloat(document.getElementById('rate-input').value);
+  if(r>0){S.cfg.rate=r;save('cfg');toast('✅ تم حفظ سعر الصرف');}
+}
+
+function exportBackup(){
+  const data={wallets:S.wallets,txs:S.txs,rec:S.rec,goals:S.goals,debts:S.debts,cats:S.cats,budgets:S.budgets,cfg:S.cfg};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download='محفظتي_'+today()+'.json';a.click();
+  toast('✅ تم التصدير');
+}
+
+function importBackup(input){
+  const f=input.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{try{const d=JSON.parse(e.target.result);if(d.wallets){S.wallets=d.wallets;save('wallets');}if(d.txs){S.txs=d.txs;save('txs');}if(d.rec){S.rec=d.rec;save('rec');}if(d.goals){S.goals=d.goals;save('goals');}if(d.debts){S.debts=d.debts;save('debts');}if(d.cats){S.cats=d.cats;save('cats');}if(d.budgets){S.budgets=d.budgets;save('budgets');}if(d.cfg){S.cfg=d.cfg;save('cfg');}toast('✅ تمت الاستعادة!');render();}catch{toast('❌ ملف غير صالح','warn');}};
+  r.readAsText(f);
+}
+
+function clearAll(){if(!confirm('⚠️ مسح جميع البيانات؟'))return;S.wallets=[{id:'w1',name:'المحفظة الرئيسية',balance:0,currency:'IQD',minBalance:0}];S.txs=[];S.rec=[];S.goals=[];S.debts=[];S.budgets=[];['wallets','txs','rec','goals','debts','budgets'].forEach(k=>save(k));toast('🗑️ تم المسح','warn');render();}
+
+function exportExcel(){
+  if(typeof XLSX==='undefined'){toast('⚠️ يحتاج إنترنت لتصدير Excel','warn');return;}
+  const rows=S.txs.map(t=>{const w=getWallet(t.walletId);const cat=getCat(t.category);return{'التاريخ':t.date,'النوع':t.type==='income'?'دخل':'مصروف','المبلغ':t.amount,'العملة':t.currency,'بالدينار':Math.round(toIQD(t.amount,t.currency)),'الفئة':cat.l,'المحفظة':w.name,'ملاحظة':t.note||''};});
+  const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'معاملاتي');XLSX.writeFile(wb,'محفظتي_'+today()+'.xlsx');
+  toast('✅ تم تصدير Excel');
+}
+
+function exportPDF(){
+  const total=S.wallets.reduce((s,w)=>s+toIQD(w.balance,w.currency),0);
+  const rows=S.txs.slice(0,100).map(t=>{const w=getWallet(t.walletId);const cat=getCat(t.category);return"<tr><td>"+t.date+"</td><td style='color:"+(t.type==='income'?'green':'red')+"'>"+(t.type==='income'?'دخل':'مصروف')+"</td><td>"+fmt(t.amount,t.currency)+"</td><td>"+cat.l+"</td><td>"+w.name+"</td><td>"+(t.note||'')+"</td></tr>";}).join('');
+  const html="<html dir='rtl'><head><meta charset='utf-8'><style>body{font-family:Arial;padding:20px;direction:rtl}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px;font-size:12px}th{background:#0ea5e9;color:white}</style></head><body><h2>💰 تقرير محفظتي</h2><p>الرصيد: <b>"+fmtIQD(total)+"</b></p><table><tr><th>التاريخ</th><th>النوع</th><th>المبلغ</th><th>الفئة</th><th>المحفظة</th><th>ملاحظة</th></tr>"+rows+"</table>
+
+</body></html>";
+  const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);}
+}
+
+// ═══ AI TIPS ═══
+function getAiTips(){
+  const tips=[];const now=new Date();const m=now.getMonth();const y=now.getFullYear();
+  const mExp=S.txs.filter(t=>{const dd=new Date(t.date);return dd.getMonth()===m&&dd.getFullYear()===y&&t.type==='expense';});
+  const tE=mExp.reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+  const catAcc={};mExp.forEach(t=>{catAcc[t.category]=(catAcc[t.category]||0)+toIQD(t.amount,t.currency);});
+  const topCat=Object.entries(catAcc).sort((a,b)=>b[1]-a[1])[0];
+  if(topCat){const cat=getCat(topCat[0]);tips.push('📊 أكثر مصاريفك: '+cat.l+' — '+fmtIQD(topCat[1]));}
+  const prevExp=S.txs.filter(t=>{const dd=new Date(t.date);return dd.getMonth()===(m===0?11:m-1)&&t.type==='expense';}).reduce((s,t)=>s+toIQD(t.amount,t.currency),0);
+  if(prevExp>0&&tE>prevExp*1.15) tips.push('⚠️ مصاريفك زادت '+Math.round((tE/prevExp-1)*100)+'% عن الشهر الماضي');
+  else if(prevExp>0&&tE<prevExp*0.9) tips.push('✅ وفّرت '+Math.round((1-tE/prevExp)*100)+'% عن الشهر الماضي');
+  let pT=0,pM=0;for(let i=1;i<=3;i++){const mm=(m-i+12)%12;const yy=m-i<0?y-1:y;const tot=S.txs.filter(t=>{const dd=new Date(t.date);return dd.getMonth()===mm&&dd.getFullYear()===yy&&t.type==='expense';}).reduce((s,t)=>s+toIQD(t.amount,t.currency),0);if(tot>0){pT+=tot;pM++;}}
+  if(pM>0){const day=now.getDate();const proj=tE>0?(tE/day)*new Date(y,m+1,0).getDate():(pT/pM);tips.push('🔮 توقع نهاية الشهر: '+fmtIQD(proj));}
+  if(topCat){const pCA={};S.txs.filter(t=>{const dd=new Date(t.date);return dd.getMonth()===(m===0?11:m-1)&&t.type==='expense';}).forEach(t=>{pCA[t.category]=(pCA[t.category]||0)+toIQD(t.amount,t.currency);});const pv=pCA[topCat[0]]||0;if(pv>0&&catAcc[topCat[0]]>pv*1.5){const cat=getCat(topCat[0]);tips.push('🚨 إنفاق غير اعتيادي في '+cat.l+'! زاد '+Math.round((catAcc[topCat[0]]/pv-1)*100)+'%');}}
+  const owe=S.debts.filter(d=>!d.paid&&d.type==='owe');
+  if(owe.length) tips.push('💳 '+owe.length+' ديون غير مسددة — '+fmtIQD(owe.reduce((s,d)=>s+toIQD(d.amount,d.currency),0)));
+  const near=S.goals.filter(g=>g.current>0&&g.current/g.target>0.8&&g.current<g.target);
+  if(near.length) tips.push('🎯 قريب من هدف "'+near[0].name+'"!');
+  const total=S.wallets.reduce((s,w)=>s+toIQD(w.balance,w.currency),0);
+  if(total<0) tips.push('🚨 رصيدك الكلي سلبي!');
+  if(tE>0) tips.push('💡 لو وفّرت 10% = '+fmtIQD(tE*0.1)+' توفير إضافي');
+  if(!tips.length) tips.push('💡 سجّل معاملاتك يومياً للحصول على تحليل ذكي');
+  return tips;
+}
+
+function bindEvents(){}
+
+// ═══ START ═══
+render();
+</script>
+
+
+</body>
+</html>
