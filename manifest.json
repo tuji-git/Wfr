@@ -1,0 +1,21 @@
+{
+  "name": "محفظتي",
+  "short_name": "محفظتي",
+  "description": "تطبيق إدارة الأموال الشخصية",
+  "start_url": "/Wfr/",
+  "scope": "/Wfr/",
+  "display": "standalone",
+  "background_color": "#07090f",
+  "theme_color": "#07090f",
+  "orientation": "portrait",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
